@@ -1,0 +1,22 @@
+{
+  "name": "bamazon-store",
+  "version": "1.0.0",
+  "description": "",
+  "main": "bamazonCustomer.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sromero1015/Bamazon-store.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sromero1015/Bamazon-store/issues"
+  },
+  "homepage": "https://github.com/Sromero1015/Bamazon-store#readme",
+  "dependencies": {
+    "mysql": "^2.17.1"
+  }
+}
