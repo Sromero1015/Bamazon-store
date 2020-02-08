@@ -4,105 +4,67 @@ var Table = require("cli-table2");
 
 var connection = mysql.createConnection({
   host: "localhost",
-  user: "",
+  user: "root",
   password: "",
   database: "bamazon_db",
   port: 3306
 });
 
-connection.connect();
+connection.connect(function (err) {
+  if (err) {
+    console.log(err)
+  }
+  console.log(`Connected as ${connection.threadId}`)
+  displayItems();
+})
 
-var display = function() {
-  connection.query("SELECT * FROM products", function(err, res) {
+
+function displayItems() {
+  connection.query("SELECT * FROM products", function (err, response) {
     if (err) throw err;
-    console.log("-----------------------------");
-    console.log("      Welcome To Bamazon    ");
-    console.log("-----------------------------");
-    console.log("");
-    console.log("Find below our Products List");
-    console.log("");
-    var table = new Table({
-      head: ["Product Id", "Product Description", "Cost"],
-      colWidths: [12, 50, 8],
-      colAligns: ["center", "left", "right"],
-      style: {
-        head: ["aqua"],
-        compact: true
-        // 'padding-right' : 1,
-      }
-    });
+    console.table(response);
+    pickItem();
+  });
+}
 
-    for (var i = 0; i < res.length; i++) {
-      table.push([res[i].id, res[i].products_name, res[i].price]);
-    }
-
-    console.log(table.toString());
-    console.log("");
-    shopping();
-  }); //End Connection to products
-};
-
-var shopping = function() {
+function pickItem() {
   inquirer
-    .prompt({
-      name: "productToBuy",
-      type: "input",
-      message: "Please enter the Product Id of the item you wish to purchase.!"
-    })
-    .then(function(answer1) {
-      var selection = answer1.productToBuy;
-      connection.query("SELECT * FROM products WHERE Id=?", selection, function(
-        err,
-        res
-      ) {
-        if (err) throw err;
-        if (res.length === 0) {
-          console.log(
-            "That Product doesn't exist, Please enter a Product Id from the list above"
-          );
+    .prompt([
+      {
+        name: "item",
+        type: "input",
+        message: "What is the item_id you would like to purchase?"
+      },
+      {
+        name: "quantity",
+        type: "input",
+        message: "How many would you like to purchase?"
+      }]).then(function (answer) {
 
-          shopping();
-        } else {
-          inquirer
-            .prompt({
-              name: "quantity",
-              type: "input",
-              message: "How many items would you like to purchase?"
+        var product = answer.item;
+        var quantity = answer.quantity;
+        var userCost;
+        var updateQuantity;
+
+        connection.query("SELECT * FROM products WHERE ?", { item_id: product }, function (err, response) {
+          if (err) throw err;
+          // console.log(response[0]);
+          if (quantity > response[0].stock_quantity) {
+            console.log("Insufficient Quantity!!")
+          } else {
+            userCost = quantity * response[0].price;
+            updateQuantity = response[0].stock_quantity - quantity;
+            console.log(`
+              You have purchased ${quantity} of ${response[0].product_name}
+              Your total is: ${userCost}`);
+            connection.query("UPDATE products SET ? WHERE ?", [{ stock_quantity: updateQuantity }, { item_id: product }], function (err, response) {
+              if (err) throw err;
+              console.log("Inventory Updated")
             })
-            .then(function(answer2) {
-              var quantity = answer2.quantity;
-              if (quantity > res[0].stock_quantity) {
-                console.log(
-                  "Sorry. We only have " +
-                    res[0].stock_quantity +
-                    " items of the product selected"
-                );
-                shopping();
-              } else {
-                console.log("");
-                console.log(res[0].products_name + " purchased");
-                console.log(quantity + " qty @ $" + res[0].price);
+          }
 
-                var newQuantity = res[0].stock_quantity - quantity;
-                connection.query(
-                  "UPDATE products SET stock_quantity = " +
-                    newQuantity +
-                    " WHERE id = " +
-                    res[0].id,
-                  function(err, resUpdate) {
-                    if (err) throw err;
-                    console.log("");
-                    console.log("Your Order has been Processed");
-                    console.log("Thank you for Shopping with us...!");
-                    console.log("");
-                    connection.end();
-                  }
-                );
-              }
-            });
-        }
-      });
-    });
+          connection.end();
+
+        })
+      })
 };
-
-display();
